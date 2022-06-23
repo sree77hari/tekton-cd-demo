@@ -7,22 +7,18 @@ spec:
     - name: APP_SOURCE_GIT
       type: string
       description: The application git repository
-      default: https://github.com/siamaksade/spring-petclinic
+      default: https://github.com/sree77hari/ocp-cicd.git
     - name: APP_SOURCE_REVISION
       type: string
       description: The application git revision
-      default: master
+      default: main
     - name: APP_CONFIG_GIT
       type: string
       description: The application configuration git repository
-      default: https://github.com/siamaksade/spring-petclinic-config
-    - name: APP_TESTS_GIT
-      type: string
-      description: The application test cases git repository
-      default: https://github.com/siamaksade/spring-petclinic-gatling
+      default: https://github.com/sree77hari/gitops.git
     - name: APP_IMAGE
       type: string
-      default: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic
+      default: image-registry.openshift-image-registry.svc:5000/ci-argocd-dev/myapp
       description: The application image to build
     - name: APP_IMAGE_TAG
       type: string
@@ -47,7 +43,7 @@ spec:
     - name: depth
       value: "0"
     - name: subdirectory
-      value: spring-petclinic
+      value: ocp-cicd
     - name: deleteExisting
       value: "true"
   - name: unit-tests
@@ -62,7 +58,7 @@ spec:
       workspace: maven-settings
     params:
     - name: GOALS
-      value: ["package", "-f", "spring-petclinic"]
+      value: ["package", "-f", "ocp-cicd"]
   - name: code-analysis
     taskRef:
       name: maven
@@ -79,7 +75,7 @@ spec:
       - install
       - sonar:sonar
       - -f
-      - spring-petclinic
+      - ocp-cicd
       - -Dsonar.host.url=http://sonarqube:9000
       - -Dsonar.userHome=/tmp/sonar
       - -DskipTests=true
@@ -95,7 +91,7 @@ spec:
       workspace: maven-settings
     params:
     - name: SOURCE_DIR
-      value: spring-petclinic
+      value: ocp-cicd
   - name: release-app
     taskRef:
       name: maven
@@ -113,7 +109,7 @@ spec:
       value:
       - deploy
       - -f 
-      - spring-petclinic
+      - ocp-cicd
       - -DskipTests=true
       - -DaltDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-releases/
       - -DaltSnapshotDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/
@@ -128,7 +124,7 @@ spec:
       - name: MAVEN_MIRROR_URL
         value: http://nexus:8081/repository/maven-public/
       - name: PATH_CONTEXT
-        value: spring-petclinic/target
+        value: ocp-cicd/target
       - name: IMAGE_NAME
         value: $(params.APP_IMAGE)
       - name: IMAGE_TAG
@@ -149,23 +145,7 @@ spec:
     - name: url
       value: $(params.APP_CONFIG_GIT)
     - name: subdirectory
-      value: spring-petclinic-config
-    - name: deleteExisting
-      value: "true"
-  - name: tests-clone
-    taskRef:
-      name: git-clone
-      kind: ClusterTask
-    workspaces:
-    - name: output
-      workspace: workspace
-    runAfter:
-    - build-image
-    params:
-    - name: url
-      value: $(params.APP_TESTS_GIT)
-    - name: subdirectory
-      value: spring-petclinic-gatling
+      value: gitops
     - name: deleteExisting
       value: "true"
   - name: deploy-dev
@@ -176,9 +156,9 @@ spec:
       - tests-clone
     params:
     - name: DEPLOYMENT_NAME
-      value: spring-petclinic
+      value: myapp
     - name: CURRENT_IMAGE
-      value: "quay.io/siamaksade/spring-petclinic:latest"
+      value: "quay.io/srereddy/sample:v1.10"
     - name: NEW_IMAGE_NAME
       value: $(params.APP_IMAGE)
     - name: NEW_IMAGE_TAG
@@ -188,30 +168,8 @@ spec:
     - name: NAMESPACE
       value: demo-dev
     - name: KUSTOMIZE_OVERLAY_DIR
-      value: environments/dev
+      value: argo
     workspaces:
     - name: source
       workspace: workspace
-      subPath: spring-petclinic-config
-  - name: int-test
-    taskRef:
-      name: openshift-client
-      kind: ClusterTask
-    runAfter:
-      - deploy-dev
-    params:
-    - name: SCRIPT
-      value: |
-          sleep $(($RANDOM % 40 + 20))
-  - name: perf-test
-    taskRef:
-      name: gatling
-    runAfter:
-      - deploy-dev
-    params:
-      - name: APP_URL
-        value: "http://spring-petclinic.demo-dev.svc.cluster.local:8080"
-    workspaces:
-    - name: simulations
-      workspace: workspace
-      subPath: spring-petclinic-gatling
+      subPath: gitops
