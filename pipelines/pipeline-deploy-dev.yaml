@@ -18,11 +18,11 @@ spec:
       default: https://github.com/sree77hari/gitops.git
     - name: APP_IMAGE
       type: string
-      default: image-registry.openshift-image-registry.svc:5000/ci-argocd-dev/myapp
+      default: quay.io/srereddy/sample
       description: The application image to build
     - name: APP_IMAGE_TAG
       type: string
-      default: latest
+      default: myapp
       description: The application image tag to build
   workspaces:
   - name: workspace
@@ -79,19 +79,6 @@ spec:
       - -Dsonar.host.url=http://sonarqube:9000
       - -Dsonar.userHome=/tmp/sonar
       - -DskipTests=true
-  - name: dependency-report
-    taskRef:
-      name: dependency-report
-    runAfter:
-      - source-clone
-    workspaces:
-    - name: source
-      workspace: workspace
-    - name: maven-settings
-      workspace: maven-settings
-    params:
-    - name: SOURCE_DIR
-      value: ocp-cicd
   - name: release-app
     taskRef:
       name: maven
@@ -132,44 +119,18 @@ spec:
     workspaces:
     - name: source
       workspace: workspace
-  - name: config-clone
-    taskRef:
-      name: git-clone
-      kind: ClusterTask
-    workspaces:
-    - name: output
-      workspace: workspace
+  - name: gitops-task
     runAfter:
-    - build-image
-    params:
-    - name: url
-      value: $(params.APP_CONFIG_GIT)
-    - name: subdirectory
-      value: gitops
-    - name: deleteExisting
-      value: "true"
-  - name: deploy-dev
+        - buildah-img-build
     taskRef:
-      name: deploy-app
-    runAfter:
-      - config-clone
-      - tests-clone
+      name: gitops-task
     params:
-    - name: DEPLOYMENT_NAME
-      value: myapp
-    - name: CURRENT_IMAGE
-      value: "quay.io/srereddy/sample:v1.10"
-    - name: NEW_IMAGE_NAME
-      value: $(params.APP_IMAGE)
-    - name: NEW_IMAGE_TAG
-      value: $(params.APP_IMAGE_TAG)
-    - name: NEW_IMAGE_DIGEST
-      value: $(tasks.build-image.results.IMAGE_DIGEST)
-    - name: NAMESPACE
-      value: demo-dev
-    - name: KUSTOMIZE_OVERLAY_DIR
-      value: argo
+    - name: configGitUrl
+      value: 'https://github.com/sree77hari/gitops.git'
+    - name: environment
+      value: 'dev'
+    - name: imageName
+      value: 'quay.io/srereddy/sample:$(params.APP_IMAGE_TAG)'
     workspaces:
-    - name: source
-      workspace: workspace
-      subPath: gitops
+    - name: gitops-workspace
+      workspace: gitops-workspace
