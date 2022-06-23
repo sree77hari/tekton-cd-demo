@@ -121,7 +121,7 @@ spec:
       workspace: workspace
   - name: gitops-task
     runAfter:
-        - buildah-img-build
+        - build-image
     taskRef:
       name: gitops-task
     params:
