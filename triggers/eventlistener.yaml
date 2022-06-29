@@ -6,7 +6,7 @@ metadata:
 spec:
   serviceAccountName: pipeline
   triggers:
-    - name: petclinic-webhook
+    - name: webhook
       interceptors:
         - cel:
             overlays:
@@ -17,7 +17,7 @@ spec:
       bindings:
         - ref: gogs-triggerbinding
       template:
-        ref: petclinic-trigger-template
+        ref: trigger-template
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
